@@ -10,6 +10,7 @@ import subprocess
 import time
 import torch
 import torchaudio
+import soundfile as sf
 import webdataset as wds
 import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -237,7 +238,12 @@ class SampleDataset(torch.utils.data.Dataset):
         print(f'Found {len(self.filenames)} files')
 
     def load_file(self, filename):
-        audio, in_sr = torchaudio.load(filename)
+        filename_str = str(filename)
+        if filename_str.lower().endswith(".wav"):
+            audio_np, in_sr = sf.read(filename_str, always_2d=True, dtype="float32")
+            audio = torch.from_numpy(audio_np).transpose(0, 1)
+        else:
+            audio, in_sr = torchaudio.load(filename)
 
         if in_sr != self.sr:
             resample_tf = T.Resample(in_sr, self.sr)
@@ -1340,7 +1346,7 @@ def create_dataloader_from_config(dataset_config, batch_size, sample_size, sampl
         )
 
         return torch.utils.data.DataLoader(train_set, batch_size, shuffle=shuffle,
-                                num_workers=num_workers, persistent_workers=True, pin_memory=True, drop_last=dataset_config.get("drop_last", True), collate_fn=collation_fn)
+                                num_workers=num_workers, persistent_workers=(num_workers > 0), pin_memory=True, drop_last=dataset_config.get("drop_last", True), collate_fn=collation_fn)
 
     if dataset_type == "audio_dir_chunks":
 
@@ -1387,7 +1393,7 @@ def create_dataloader_from_config(dataset_config, batch_size, sample_size, sampl
             batch_size,
             shuffle=False,
             num_workers=num_workers,
-            persistent_workers=True,
+            persistent_workers=(num_workers > 0),
             pin_memory=True,
             drop_last=False,
             collate_fn=collation_fn
@@ -1441,7 +1447,7 @@ def create_dataloader_from_config(dataset_config, batch_size, sample_size, sampl
         )
 
         return torch.utils.data.DataLoader(train_set, batch_size, shuffle=shuffle,
-                                num_workers=num_workers, persistent_workers=True, pin_memory=True, drop_last=dataset_config.get("drop_last", True), collate_fn=collation_fn)
+                                num_workers=num_workers, persistent_workers=(num_workers > 0), pin_memory=True, drop_last=dataset_config.get("drop_last", True), collate_fn=collation_fn)
 
     elif dataset_type in ["s3", "wds"]: # Support "s3" type for backwards compatibility
         wds_configs = []
@@ -1491,7 +1497,7 @@ def create_dataloader_from_config(dataset_config, batch_size, sample_size, sampl
             volume_norm=dataset_config.get("volume_norm", False),
             volume_norm_param=dataset_config.get("volume_norm_param", [-16, 2]),
             num_workers=num_workers,
-            persistent_workers=True,
+            persistent_workers=(num_workers > 0),
             pin_memory=True,
             force_channels=force_channels,
             epoch_steps=dataset_config.get("epoch_steps", 2000),

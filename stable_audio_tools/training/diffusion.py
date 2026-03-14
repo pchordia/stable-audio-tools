@@ -4,6 +4,7 @@ import random
 import torch
 import torchaudio
 import typing as tp
+import wave
 
 import auraloss
 from ema_pytorch import EMA
@@ -23,6 +24,21 @@ from .losses import AuralossLoss, MSELoss, MultiLoss
 from .utils import create_optimizer_from_config, create_scheduler_from_config, log_audio, log_image, log_metric, log_point_cloud
 
 from time import time
+
+
+def save_demo_wav(filename, audio, sample_rate):
+    audio = audio.detach().to(torch.float32).cpu()
+    max_abs = torch.max(torch.abs(audio))
+    if torch.isfinite(max_abs) and max_abs > 0:
+        audio = audio / max_abs
+    audio = torch.clamp(audio, -1.0, 1.0)
+    audio_i16 = (audio * 32767.0).round().to(torch.int16).transpose(0, 1).contiguous()
+    with wave.open(filename, "wb") as wav_file:
+        wav_file.setnchannels(audio_i16.shape[1])
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(audio_i16.numpy().tobytes())
+
 
 class Profiler:
 
@@ -404,7 +420,7 @@ class DiffusionUncondDemoCallback(pl.Callback):
 
             filename = f'demo_{trainer.global_step:08}.wav'
             fakes = fakes.to(torch.float32).div(torch.max(torch.abs(fakes))).cpu()
-            torchaudio.save(filename, fakes, self.sample_rate)
+            save_demo_wav(filename, fakes, self.sample_rate)
 
             log_audio(
                 trainer.logger, "demo", filename,
@@ -875,7 +891,7 @@ class DiffusionCondDemoCallback(pl.Callback):
 
                 filename = f'demo_audio_cond_{trainer.global_step:08}.wav'
                 audio_inputs = audio_inputs.to(torch.float32).div(torch.max(torch.abs(audio_inputs))).cpu()
-                torchaudio.save(filename, audio_inputs, self.sample_rate)
+                save_demo_wav(filename, audio_inputs, self.sample_rate)
                 log_audio(trainer.logger, f'demo_audio_cond', filename, self.sample_rate)
                 log_image(trainer.logger, f"demo_audio_cond_melspec_left", audio_spectrogram_image(audio_inputs))
 
@@ -900,7 +916,7 @@ class DiffusionCondDemoCallback(pl.Callback):
                         audio_inputs_out = rearrange(audio_inputs, 'b d n -> d (b n)')
                         filename = f'demo_{cond_id}_{trainer.global_step:08}.wav'
                         audio_inputs_out = audio_inputs_out.to(torch.float32).div(torch.max(torch.abs(audio_inputs_out))).cpu()
-                        torchaudio.save(filename, audio_inputs_out, self.sample_rate)
+                        save_demo_wav(filename, audio_inputs_out, self.sample_rate)
                         log_audio(trainer.logger, f'demo_{cond_id}', filename, self.sample_rate)
                         log_image(trainer.logger, f"demo_{cond_id}_melspec_left", audio_spectrogram_image(audio_inputs_out))
 
@@ -933,7 +949,7 @@ class DiffusionCondDemoCallback(pl.Callback):
 
                 filename = f'demo_cfg_{cfg_scale}_{trainer.global_step:08}.wav'
                 fakes_out = fakes.to(torch.float32).div(torch.max(torch.abs(fakes))).cpu()
-                torchaudio.save(filename, fakes_out, self.sample_rate)
+                save_demo_wav(filename, fakes_out, self.sample_rate)
                 log_audio(trainer.logger, f'demo_cfg_{cfg_scale}', filename, self.sample_rate)                
                 log_image(trainer.logger, f'demo_melspec_left_cfg_{cfg_scale}', audio_spectrogram_image(fakes_out))
             
@@ -961,7 +977,7 @@ class DiffusionCondDemoCallback(pl.Callback):
                                 audio_inputs = rearrange(audio_inputs, 'b d n -> d (b n)')
                                 audio_mix = audio_inputs + fakes
                                 audio_mix_out = audio_mix.to(torch.float32).div(torch.max(torch.abs(audio_mix))).cpu()
-                                torchaudio.save(filename, audio_mix_out, self.sample_rate)
+                                save_demo_wav(filename, audio_mix_out, self.sample_rate)
                                 log_audio(trainer.logger, f'demo_{cond_id}_mix_cfg_{cfg_scale}', filename, self.sample_rate)
 
                         elif cond_type == "audio_dict":
@@ -987,13 +1003,13 @@ class DiffusionCondDemoCallback(pl.Callback):
                             submix = rearrange(submix, 'b d n -> d (b n)')
                             filename = f'demo_{cond_id}_submix_cfg_{cfg_scale}_{trainer.global_step:08}.wav'
                             submix_out = submix.to(torch.float32).div(torch.max(torch.abs(submix))).cpu()
-                            torchaudio.save(filename, submix_out, self.sample_rate)
+                            save_demo_wav(filename, submix_out, self.sample_rate)
                             log_audio(trainer.logger, f'demo_{cond_id}_submix_cfg_{cfg_scale}', filename, self.sample_rate)
 
                             filename = f'demo_{cond_id}_mix_cfg_{cfg_scale}_{trainer.global_step:08}.wav'
                             audio_mix = submix + fakes
                             audio_mix_out = audio_mix.to(torch.float32).div(torch.max(torch.abs(audio_mix))).cpu()
-                            torchaudio.save(filename, audio_mix_out, self.sample_rate)
+                            save_demo_wav(filename, audio_mix_out, self.sample_rate)
                             log_audio(trainer.logger, f'demo_{cond_id}_mix_cfg_{cfg_scale}', filename, self.sample_rate)
 
             del fakes
@@ -1111,7 +1127,7 @@ class DiffusionCondInpaintDemoCallback(pl.Callback):
 
                 filename = f'demo_cfg_{cfg_scale}_{trainer.global_step:08}.wav'
                 fakes = fakes.to(torch.float32).div(torch.max(torch.abs(fakes))).cpu()
-                torchaudio.save(filename, fakes, self.sample_rate)
+                save_demo_wav(filename, fakes, self.sample_rate)
 
                 log_audio(trainer.logger, f'demo_cfg_{cfg_scale}', filename, self.sample_rate)
                 log_image(trainer.logger, f'demo_melspec_left_cfg_{cfg_scale}', audio_spectrogram_image(fakes))
@@ -1336,7 +1352,7 @@ class DiffusionAutoencoderDemoCallback(pl.Callback):
 
         filename = f'recon_{trainer.global_step:08}.wav'
         reals_fakes = reals_fakes.to(torch.float32).div(torch.max(torch.abs(reals_fakes))).cpu()
-        torchaudio.save(filename, reals_fakes, self.sample_rate)
+        save_demo_wav(filename, reals_fakes, self.sample_rate)
 
         # log_dict[f'recon'] = wandb.Audio(
         #    filename, sample_rate=self.sample_rate, caption=f'Reconstructed')
@@ -1363,7 +1379,7 @@ class DiffusionAutoencoderDemoCallback(pl.Callback):
                 first_stage_fakes = rearrange(first_stage_fakes, 'b d n -> d (b n)')
                 first_stage_fakes = first_stage_fakes.to(torch.float32).cpu()
                 first_stage_filename = f'first_stage_{trainer.global_step:08}.wav'
-                torchaudio.save(first_stage_filename, first_stage_fakes, self.sample_rate)
+                save_demo_wav(first_stage_filename, first_stage_fakes, self.sample_rate)
 
                 log_audio(
                     trainer.logger, "first_stage", first_stage_filename,
