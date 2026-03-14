@@ -23,4 +23,4 @@ RUN python -m pip install --upgrade pip 'setuptools<81' wheel packaging ninja \
 
 RUN python scripts/validate_flash_attn.py
 
-ENTRYPOINT ["/bin/bash"]
+CMD ["/bin/bash"]

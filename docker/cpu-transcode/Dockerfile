@@ -14,4 +14,4 @@ RUN python -m pip install --upgrade pip \
 
 WORKDIR /workspace
 
-ENTRYPOINT ["/bin/bash"]
+CMD ["/bin/bash"]
