@@ -14,7 +14,10 @@ It is intended to replace bootstrap-heavy VM setup with a reproducible runtime t
 ## Build
 
 ```bash
-docker build -f docker/gpu-runtime/Dockerfile -t stable-audio-tools:gpu-runtime .
+docker buildx build --platform linux/amd64 \
+  -f docker/gpu-runtime/Dockerfile \
+  -t stable-audio-tools:gpu-runtime \
+  --load .
 ```
 
 ## Validate
@@ -28,3 +31,4 @@ docker run --rm --gpus all stable-audio-tools:gpu-runtime python scripts/validat
 - This container assumes a host with a working NVIDIA driver stack.
 - It does not replace the need for a GPU-capable host image.
 - For future H100/H200 runs, this image should be treated as the default runtime baseline rather than reinstalling Python and `flash-attn` during VM bootstrap.
+- On Apple Silicon, build for `linux/amd64` explicitly. The Docker build already runs `python scripts/validate_flash_attn.py`, so that build step is the reliable local validation signal even if `docker run` on the final amd64 image is not usable on the laptop.
