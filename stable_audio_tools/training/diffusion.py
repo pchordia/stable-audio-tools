@@ -244,10 +244,18 @@ class DiffusionUncondTrainingWrapper(pl.LightningModule):
             bucket_size = 1 / num_loss_buckets
             loss_all = F.mse_loss(v, targets, reduction="none")
 
-            sigmas = rearrange(self.all_gather(sigmas), "w b c n -> (w b) c n").squeeze()
+            gathered_sigmas = self.all_gather(sigmas)
+            if gathered_sigmas.ndim == 4:
+                sigmas = rearrange(gathered_sigmas, "w b c n -> (w b) c n").squeeze()
+            else:
+                sigmas = gathered_sigmas.squeeze()
 
             # gather loss_all across all GPUs
-            loss_all = rearrange(self.all_gather(loss_all), "w b c n -> (w b) c n")
+            gathered_loss_all = self.all_gather(loss_all)
+            if gathered_loss_all.ndim == 4:
+                loss_all = rearrange(gathered_loss_all, "w b c n -> (w b) c n")
+            else:
+                loss_all = gathered_loss_all
 
             # Bucket loss values based on corresponding sigma values, bucketing sigma values by bucket_size
             loss_all = torch.stack([loss_all[(sigmas >= i) & (sigmas < i + bucket_size)].mean() for i in torch.arange(0, 1, bucket_size).to(self.device)])
