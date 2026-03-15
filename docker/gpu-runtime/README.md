@@ -11,6 +11,16 @@ It is intended to replace bootstrap-heavy VM setup with a reproducible runtime t
 - `flash-attn`,
 - a simple validation step that fails the build if `flash_attn` does not import.
 
+Current baseline source:
+
+- `/Users/paragchordia/.codex/workspaces/stable-audio-tools/docker/gpu-runtime/runpod-active-baseline.md`
+
+The Dockerfile now intentionally tracks the active Runpod training environment:
+
+- base image: `pytorch/pytorch:2.10.0-cuda12.8-cudnn9-devel`
+- `flash-attn==2.7.3`
+- additional pinned runtime packages in `docker/gpu-runtime/runpod-baseline-requirements.txt`
+
 ## Build
 
 ```bash

@@ -1,0 +1,8 @@
+einops==0.8.2
+fsspec==2026.2.0
+numpy==1.23.5
+pytorch-lightning==2.1.0
+soundfile==0.13.1
+torchcodec==0.10.0
+transformers==5.2.0
+wandb==0.25.0
