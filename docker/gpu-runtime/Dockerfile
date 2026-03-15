@@ -25,11 +25,11 @@ COPY . /opt/stable-audio-tools
 COPY docker/gpu-runtime/runpod-baseline-requirements.txt /tmp/runpod-baseline-requirements.txt
 
 RUN uv python install 3.11 \
-    && uv venv --python 3.11 "$VIRTUAL_ENV" \
-    && "$VIRTUAL_ENV/bin/pip" install --upgrade pip 'setuptools<81' wheel packaging ninja \
-    && "$VIRTUAL_ENV/bin/pip" install -r /tmp/runpod-baseline-requirements.txt \
-    && "$VIRTUAL_ENV/bin/pip" install -e . \
-    && "$VIRTUAL_ENV/bin/pip" install --no-build-isolation flash-attn==2.7.3
+    && uv venv --python 3.11 --seed "$VIRTUAL_ENV" \
+    && "$VIRTUAL_ENV/bin/python" -m pip install --upgrade pip 'setuptools<81' wheel packaging ninja \
+    && "$VIRTUAL_ENV/bin/python" -m pip install -r /tmp/runpod-baseline-requirements.txt \
+    && "$VIRTUAL_ENV/bin/python" -m pip install -e . \
+    && "$VIRTUAL_ENV/bin/python" -m pip install --no-build-isolation flash-attn==2.7.3
 
 RUN python scripts/validate_flash_attn.py
 
