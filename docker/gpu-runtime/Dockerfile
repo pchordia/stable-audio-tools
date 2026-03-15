@@ -9,6 +9,7 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     git \
+    python3.12-venv \
     build-essential \
     ninja-build \
     libsndfile1 \
