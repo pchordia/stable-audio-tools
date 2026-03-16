@@ -52,6 +52,7 @@ jobs:
           file: docker/gpu-runtime/Dockerfile
           platforms: linux/amd64
           push: true
+          cache-from: type=gha,scope=gpu-runtime
+          cache-to: type=gha,mode=max,scope=gpu-runtime
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
