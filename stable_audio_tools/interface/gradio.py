@@ -1,7 +1,9 @@
 import gc
 import numpy as np
 import gradio as gr
-import json 
+import json
+import tempfile
+from pathlib import Path
 import re
 import subprocess
 import torch
@@ -25,6 +27,13 @@ model = None
 model_type = None
 sample_rate = 32000
 sample_size = 1920000
+
+def save_audio_to_temp(audio, sample_rate):
+    tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    tmp.close()
+    path = Path(tmp.name)
+    torchaudio.save(str(path), audio, sample_rate)
+    return str(path)
 
 def load_model(model_config=None, model_ckpt_path=None, pretrained_name=None, pretransform_ckpt_path=None, device="cuda", model_half=False):
     global model, sample_rate, sample_size, model_type
@@ -159,11 +168,11 @@ def generate_uncond(
 
     audio = audio.to(torch.float32).div(torch.max(torch.abs(audio))).clamp(-1, 1).cpu()
 
-    torchaudio.save("output.wav", audio, sample_rate)
+    path = save_audio_to_temp(audio, sample_rate)
 
     audio_spectrogram = audio_spectrogram_image(audio, sample_rate=sample_rate)
 
-    return ("output.wav", [audio_spectrogram, *preview_images])
+    return (path, [audio_spectrogram, *preview_images])
 
 def generate_lm(
         temperature=1.0,
@@ -193,11 +202,11 @@ def generate_lm(
 
     audio = audio.to(torch.float32).div(torch.max(torch.abs(audio))).clamp(-1, 1).cpu()
 
-    torchaudio.save("output.wav", audio, sample_rate)
+    path = save_audio_to_temp(audio, sample_rate)
 
     audio_spectrogram = audio_spectrogram_image(audio, sample_rate=sample_rate)
 
-    return ("output.wav", [audio_spectrogram])
+    return (path, [audio_spectrogram])
 
 
 def create_uncond_sampling_ui(model_config):   
@@ -305,9 +314,9 @@ def autoencoder_process(audio, latent_noise, n_quantizers):
 
     audio = audio.to(torch.float32).clamp(-1, 1).cpu()
 
-    torchaudio.save("output.wav", audio, sample_rate)
+    path = save_audio_to_temp(audio, sample_rate)
 
-    return "output.wav"
+    return path
 
 def create_autoencoder_ui(model_config):
 
